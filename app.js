@@ -5,6 +5,6 @@ const userRoutes = require("./routes/users-routes");
 
 const app = express();
 
-app.use(userRoutes);
+app.use("/pons", flashcardsRoutes);
 
 app.listen(5000);
