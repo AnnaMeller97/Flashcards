@@ -65,5 +65,63 @@ const signUp = async (req, res, next) => {
     token: token,
   });
 };
+const login = async (req, res, next) => {
+  const { email, password } = req.body;
+
+  let existingUser;
+  try {
+    existingUser = await User.findOne({ email: email });
+  } catch (error) {
+    return next(res.status(500).json({ message: "Logging in failed." }));
+  }
+
+  if (!existingUser) {
+    return next(
+      res
+        .status(403)
+        .json({ message: "Invalid credentials, logging in failed." })
+    );
+  }
+
+  let isValidPassword = false;
+  try {
+    isValidPassword = await bcrypt.compare(password, existingUser.password);
+  } catch (error) {
+    return next(res.status(500).json({ message: "Logging in failed." }));
+  }
+
+  if (!isValidPassword) {
+    return next(
+      res
+        .status(403)
+        .json({ message: "Invalid credentials, logging in failed." })
+    );
+  }
+
+  let token;
+  try {
+    token = jwt.sign(
+      {
+        id: existingUser.id,
+        name: existingUser.name,
+        email: existingUser.email,
+      },
+      `${process.env.JWT_PRIVATE_KEY}`,
+      { expiresIn: "3h" }
+    );
+  } catch (error) {
+    return next(res.status(500).json({ message: "Logging in failed." }));
+  }
+
+  res
+    .status(200)
+    .json({
+      id: existingUser.id,
+      name: existingUser.name,
+      email: existingUser.email,
+      token: token,
+    });
+};
 
 exports.signUp = signUp;
+exports.login = login;
