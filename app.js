@@ -9,12 +9,14 @@ const app = express();
 
 app.use(bodyParser.json());
 
+app.use(userRoutes);
+
 app.use(flashcardsRoutes);
 
 mongoose
   .connect(
     `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0-6llqj.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`,
-    { useNewUrlParser: true, useUnifiedTopology: true }
+    { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true }
   )
   .then(() => {
     app.listen(5000);
