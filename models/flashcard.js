@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const flashcardSchema = new Schema({
-  owner: { type: String, required: true },
+  owner: { type: mongoose.Types.ObjectId, required: true, ref: "User" },
   headword: { type: String, required: true },
   inputLanguage: {
     type: String,
@@ -13,7 +13,7 @@ const flashcardSchema = new Schema({
     type: String,
     required: true,
   },
-  translations: [{ type: String, require: true }],
+  translations: [{ type: String, required: true }],
 });
 
 module.exports = mongoose.model("Flashcard", flashcardSchema);
