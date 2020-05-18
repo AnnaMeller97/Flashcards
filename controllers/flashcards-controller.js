@@ -1,7 +1,9 @@
 const { validationResult } = require("express-validator");
+const mongoose = require("mongoose");
 
 const Flashcard = require("../models/flashcard");
 const ponsTranslations = require("../util/pons-translations");
+const User = require("../models/user");
 
 const getTranslations = async (req, res, next) => {
   const { inputLanguage, outputLanguage, headword } = req.params;
@@ -81,10 +83,35 @@ const createFlashcard = async (req, res, next) => {
     translations,
   });
 
+  let user;
   try {
-    await createdFlashcard.save();
+    user = await User.findById(owner.toString());
   } catch (error) {
-    return res.status(500).json({ message: "Creating flashcard failed." });
+    return next(
+      res.status(500).json({ message: "Creating flashcard failed." })
+    );
+  }
+  if (!user) {
+    return next(
+      res.status(404).json({ message: "Creating flashcard failed." })
+    );
+  }
+
+  let sess;
+  try {
+    sess = await mongoose.startSession();
+    sess.startTransaction();
+    await createdFlashcard.save({ session: sess });
+    user.flashcards.push(createdFlashcard);
+    await user.save({ session: sess });
+    await sess.commitTransaction();
+    sess.endSession();
+  } catch (error) {
+    await sess.abortTransaction();
+    sess.endSession();
+    return next(
+      res.status(500).json({ message: "Creating flashcard failed." })
+    );
   }
 
   res.status(201).json({ flashcard: createdFlashcard });
@@ -124,8 +151,25 @@ const deleteFlashcardById = async (req, res, next) => {
 
   let flashcard;
   try {
-    flashcard = await Flashcard.findByIdAndDelete(flashcardId);
+    flashcard = await Flashcard.findById(flashcardId).populate("owner");
   } catch (error) {
+    return next(
+      res.status(500).json({ message: "Deleting flashcard failed." })
+    );
+  }
+
+  let sess;
+  try {
+    sess = await mongoose.startSession();
+    sess.startTransaction();
+    await flashcard.remove({ session: sess });
+    flashcard.owner.flashcards.pull(flashcard);
+    await flashcard.owner.save({ session: sess });
+    await sess.commitTransaction();
+    sess.endSession();
+  } catch (error) {
+    await sess.abortTransaction();
+    sess.endSession();
     return next(
       res.status(500).json({ message: "Deleting flashcard failed." })
     );
